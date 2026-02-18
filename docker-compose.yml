@@ -1,0 +1,12 @@
+---
+services:
+  dns-scanner:
+    build: .
+    network_mode: host
+    volumes:
+      - ./app/config.yml:/app/config.yml
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    # To run manually: docker-compose run dns-scanner
+    # To run with overrides: docker-compose run dns-scanner --verbose --test-all
+    # To run on a schedule, you can use a cron sidecar or host cron triggering `docker-compose run`

@@ -68,11 +68,53 @@ This will display a summary table sorted by average latency.
     python3 dns_latency_tester.py --refresh-server-list
     ```
 
+*   **`-a, --test-all`**: Override disabled tests.
+    Re-tests all servers regardless of their enabled status or expiry.
+    ```bash
+    python3 dns_latency_tester.py --test-all
+    ```
+
+*   **`-s, --slack-webhook [url]`**: Send results to Slack.
+    Overrides the webhook URL in `config.yml`.
+    ```bash
+    python3 dns_latency_tester.py --slack-webhook https://hooks.slack.com/services/...
+    ```
+
+## Docker Usage
+
+A `Dockerfile` and `docker-compose.yml` are provided for containerized execution.
+
+### Build and Run
+```bash
+docker-compose build
+docker-compose run dns-scanner
+```
+
+### Configuration
+Mount your `config.yml` into the container:
+```yaml
+volumes:
+  - ./config.yml:/app/config.yml
+```
+
+### Scheduling
+To run the scanner on a schedule (e.g., daily), you can use the host's cron:
+```bash
+# Run daily at 3 AM
+0 3 * * * cd /path/to/dns_scanner && docker-compose run --rm dns-scanner
+```
+
 ## Example Output
 
 ### Table Format
 ```
---- Successful Tests (sorted by average latency) ---
+--- Top 5 DNS results ---
+Provider                  Min (ms)   Avg (ms)   Max (ms)   Endpoint
+------------------------- ---------- ---------- ---------- ---------------------------------------------
+Cloudflare                15         18         25         1.1.1.1
+...
+
+--- All Successful Tests (sorted by avg, min, max latency) ---
 Provider                  Protocol   Min (ms)   Avg (ms)   Max (ms)   Endpoint
 ------------------------- ---------- ---------- ---------- ---------- ---------------------------------------------
 Cloudflare                DoQ        15         18         25         cloudflare-dns.com

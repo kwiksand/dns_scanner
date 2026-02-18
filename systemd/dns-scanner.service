@@ -1,0 +1,14 @@
+# dns-scanner.service
+[Unit]
+Description=DNS Latency Scanner
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/shannon/workspace/personal/dns_scanner
+ExecStart=/usr/bin/docker compose run --rm dns-scanner
+User=shannon
+
+[Install]
+WantedBy=multi-user.target
