@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">Historical DNS Performance</h2>
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th data-sort="text" style="cursor: pointer">Provider ↕</th>
+                                <th data-sort="text" style="cursor: pointer">Protocol ↕</th>
+                                <th data-sort="number" style="cursor: pointer">Runs ↕</th>
+                                <th data-sort="number" style="cursor: pointer">Queries ↕</th>
+                                <th data-sort="number" style="cursor: pointer">Fail ↕</th>
+                                <th data-sort="number" style="cursor: pointer">Min (ms) ↕</th>
+                                <th data-sort="number" style="cursor: pointer">Avg (ms) ↕</th>
+                                <th data-sort="number" style="cursor: pointer">Max (ms) ↕</th>
+                                <th>Endpoint</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in stats %}
+                            <tr>
+                                <td>{{ row.provider }}</td>
+                                <td><span class="badge bg-secondary">{{ row.protocol }}</span></td>
+                                <td>{{ row.total_runs }}</td>
+                                <td>{{ row.total_queries }}</td>
+                                <td class="{{ 'text-danger' if row.failed_queries > 0 else '' }}">
+                                    {{ row.failed_queries }}
+                                </td>
+                                <td>{{ row.min_latency|round(1) if row.min_latency is not none else 'N/A' }}</td>
+                                <td>{{ row.avg_latency|round(1) if row.avg_latency is not none else 'N/A' }}</td>
+                                <td>{{ row.max_latency|round(1) if row.max_latency is not none else 'N/A' }}</td>
+                                <td class="text-muted small text-truncate" style="max-width: 250px;">{{ row.endpoint }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

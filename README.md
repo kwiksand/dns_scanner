@@ -1,157 +1,99 @@
-# DNS Latency Tester
+# DNS Latency Tester & Dashboard
 
-A simple Python script to test the latency of various public DNS servers. It supports standard DNS (UDP), DNS-over-TLS (DoT), DNS-over-HTTPS (DoH), and DNS-over-QUIC (DoQ) protocols.
+A comprehensive tool to monitor and analyze the latency of various public DNS servers. It supports standard DNS (UDP), DNS-over-TLS (DoT), DNS-over-HTTPS (DoH), and DNS-over-QUIC (DoQ) protocols. Features include a persistent SQLite database for historical trends and a modern web dashboard for management.
+
+## Features
+
+- **Multi-Protocol Support**: Test DNS, DoT, DoH, and DoQ.
+- **Persistent Storage**: All test results are stored in an SQLite database.
+- **Web Dashboard**: View historical statistics, manage server lists, and trigger manual scans.
+- **Automated Management**: Automatically disables failing servers with a 48-hour retry expiry.
+- **Slack Notifications**: Send test results and recommendations to a Slack channel.
 
 ## Prerequisites
 
-*   Python 3
-*   The `dig` command-line tool. (Usually part of `dnsutils` or `bind-utils` package)
-*   The PyYAML Python library: `pip install pyyaml`
+- Python 3.11+
+- [Docker](https://docs.docker.com/) and [Docker Compose](https://docs.docker.com/compose/) (recommended)
+- Or install local dependencies: `pip install -r app/requirements.txt`
+
+## Web Dashboard
+
+The web interface provides a central point for monitoring and configuration.
+
+- **Historical Stats**: View cumulative average, min, and max latencies, along with total runs and failure counts.
+- **Server Management**: Enable/disable providers or individual endpoints, and add new servers to the tracking list.
+- **Manual Scan**: Trigger a fresh latency test across all enabled servers at any time.
+
+By default, the dashboard is accessible at `http://localhost:5000`.
+
+## Docker Usage (Recommended)
+
+The easiest way to run the DNS Scanner is via Docker Compose.
+
+### Quick Start
+```bash
+docker-compose up --build
+```
+
+### Persistence
+The `docker-compose.yml` is configured to persist your configuration and database:
+- `app/config.yml`: Stores your server list and preferences.
+- `app/dns_scanner.db`: Stores all historical latency data.
+
+## CLI Usage
+
+You can also run the scanner directly via the command line for one-off tests or statistics.
+
+### Run a Latency Test
+```bash
+python3 app/dns_latency_tester.py --verbose
+```
+
+### View Historical Stats
+```bash
+python3 app/dns_latency_tester.py --stats
+```
+
+### Command-Line Arguments
+- `--format [table|json]`: Specify output format (default: `table`).
+- `-v, --verbose`: Show detailed progress of each test run.
+- `-r, --refresh-server-list`: Check availability of all servers and update their `enabled` status in `config.yml`.
+- `-a, --test-all`: Force a test of all servers, including those currently disabled.
+- `-s, --slack-webhook [url]`: Send results to a specific Slack webhook.
 
 ## Configuration (`config.yml`)
 
-The `config.yml` file contains the list of DNS servers to be tested. You can add, remove, or modify providers and their endpoints.
+The `config.yml` file defines the servers and notification settings.
 
-### Structure
-The configuration is structured as follows:
+### Server Structure
 ```yaml
 servers:
   providers:
-    ProviderName:
-    - protocol: <protocol>
-      endpoint: <ip_or_hostname>
-      enabled: <true_or_false>
-    - ...
-    AnotherProvider:
-    - ...
-```
-### Fields
-*   **ProviderName:** The name of the DNS provider (e.g., Cloudflare, Google).
-*   **protocol:** The query protocol. Supported values are:
-    *   `DNS`: Standard DNS over UDP port 53.
-    *   `IPv6`: Standard DNS using an IPv6 address.
-    *   `DoT`: DNS-over-TLS.
-    *   `DoH`: DNS-over-HTTPS.
-    *   `DoQ`: DNS-over-QUIC.
-*   **endpoint:** The IP address or hostname of the DNS server.
-*   **enabled:** Set to `true` to include the server in the latency tests, or `false` to exclude it.
-
-## Usage
-
-The script is executed from the command line.
-
-### Basic Test
-To run the latency test on all enabled servers in `config.yml`:
-```bash
-python3 dns_latency_tester.py
-```
-This will display a summary table sorted by average latency.
-
-### Command-Line Arguments
-
-*   **`--format [table|json]`**: Specify the output format.
-    *   `table` (default): A human-readable table.
-    *   `json`: A machine-readable JSON output.
-    ```bash
-    python3 dns_latency_tester.py --format json
-    ```
-
-*   **`-v, --verbose`**: Enable verbose output.
-    Shows the progress of each individual test run.
-    ```bash
-    python3 dns_latency_tester.py --verbose
-    ```
-
-*   **`-r, --refresh-server-list`**: Refresh the server list.
-    This command checks the availability of *all* servers listed in `config.yml` (both enabled and disabled). It then updates the `enabled` status for each server in the file based on whether a successful response can be received. This is useful for finding which servers are currently reachable from your network.
-    ```bash
-    python3 dns_latency_tester.py --refresh-server-list
-    ```
-
-*   **`-a, --test-all`**: Override disabled tests.
-    Re-tests all servers regardless of their enabled status or expiry.
-    ```bash
-    python3 dns_latency_tester.py --test-all
-    ```
-
-*   **`-s, --slack-webhook [url]`**: Send results to Slack.
-    Overrides the webhook URL in `config.yml`.
-    ```bash
-    python3 dns_latency_tester.py --slack-webhook https://hooks.slack.com/services/...
-    ```
-
-## Docker Usage
-
-A `Dockerfile` and `docker-compose.yml` are provided for containerized execution.
-
-### Build and Run
-```bash
-docker-compose build
-docker-compose run dns-scanner
+    Cloudflare:
+    - protocol: DNS
+      endpoint: 1.1.1.1
+      enabled: true
+    - protocol: DoH
+      endpoint: https://cloudflare-dns.com/dns-query
+      enabled: true
 ```
 
-### Configuration
-Mount your `config.yml` into the container:
+### Notification Settings
 ```yaml
-volumes:
-  - ./config.yml:/app/config.yml
+notifications:
+  slack:
+    webhook_url: "https://hooks.slack.com/services/..."
 ```
 
-### Scheduling
-To run the scanner on a schedule (e.g., daily), you can use the host's cron:
-```bash
-# Run daily at 3 AM
-0 3 * * * cd /path/to/dns_scanner && docker-compose run --rm dns-scanner
-```
+## Database Schema
 
-## Example Output
+The SQLite database (`dns_scanner.db`) contains a `server_stats` table with the following fields:
+- `provider`, `protocol`, `endpoint`: Identifiers for the server.
+- `total_runs`: Number of times the server has been included in a scan.
+- `total_queries`: Total individual DNS queries attempted.
+- `failed_queries`: Number of queries that timed out or failed.
+- `min_latency`, `max_latency`: All-time minimum and maximum response times.
+- `avg_latency`: A moving average of successful query response times.
 
-### Table Format
-```
---- Top 5 DNS results ---
-Provider                  Min (ms)   Avg (ms)   Max (ms)   Endpoint
-------------------------- ---------- ---------- ---------- ---------------------------------------------
-Cloudflare                15         18         25         1.1.1.1
-...
-
---- All Successful Tests (sorted by avg, min, max latency) ---
-Provider                  Protocol   Min (ms)   Avg (ms)   Max (ms)   Endpoint
-------------------------- ---------- ---------- ---------- ---------- ---------------------------------------------
-Cloudflare                DoQ        15         18         25         cloudflare-dns.com
-Google                    DoT        18         22         30         dns.google
-...
-
---- Failed or Timed Out (0 successful tests) ---
-Provider                  Protocol   Endpoint
-------------------------- ---------- ---------------------------------------------
-SomeProvider              DNS        1.2.3.4
-...
-```
-
-### JSON Format
-```json
-{
-  "results": [
-    {
-      "info": {
-        "provider": "Cloudflare",
-        "protocol": "DoQ",
-        "endpoint": "cloudflare-dns.com"
-      },
-      "stats": {
-        "min": 15,
-        "avg": 18,
-        "max": 25,
-        "successful_tests": 20
-      }
-    }
-  ],
-  "failed": [
-    {
-      "provider": "SomeProvider",
-      "protocol": "DNS",
-      "endpoint": "1.2.3.4"
-    }
-  ]
-}
-```
+---
+*Note: This project is intended for monitoring and optimization of DNS performance. Please ensure you comply with the terms of service of any public DNS providers you test.*

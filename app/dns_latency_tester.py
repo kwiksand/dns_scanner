@@ -14,6 +14,7 @@ import dns.query
 import dns.inet
 import dns.resolver
 import httpx
+from database import init_db, update_server_stats, get_all_stats
 
 
 # Domains to use for testing
@@ -198,9 +199,9 @@ def run_tests_for_service(server_info, verbose, result_queue):
             "max": max(latencies),
             "successful_tests": len(latencies),
         }
-        result_queue.put({"info": server_info, "stats": stats})
+        result_queue.put({"info": server_info, "stats": stats, "latencies": latencies})
     else:
-        result_queue.put({"info": server_info, "stats": None, "successful_tests": 0})
+        result_queue.put({"info": server_info, "stats": None, "successful_tests": 0, "latencies": []})
 
 
 def send_slack_notification(results, failed_servers, webhook_url):
@@ -363,6 +364,31 @@ def print_json_output(results, failed_servers):
     print(json.dumps(output, indent=2))
 
 
+def print_historical_stats():
+    """Prints cumulative statistics from the database."""
+    stats = get_all_stats()
+    if not stats:
+        print("No historical statistics found in the database.")
+        return
+
+    print("\n--- Cumulative DNS Statistics (sorted by all-time average latency) ---")
+    print(
+        f"{'Provider':<20} {'Proto':<6} {'Runs':>5} {'Tests':>6} {'Fail':>5} {'Min':>6} {'Avg':>6} {'Max':>6} {'Endpoint'}"
+    )
+    print(f"{'-' * 20} {'-' * 6} {'-' * 5} {'-' * 6} {'-' * 5} {'-' * 6} {'-' * 6} {'-' * 6} {'-' * 45}")
+
+    for row in stats:
+        avg = f"{row['avg_latency']:.1f}" if row["avg_latency"] is not None else "N/A"
+        min_l = f"{row['min_latency']:.1f}" if row["min_latency"] is not None else "N/A"
+        max_l = f"{row['max_latency']:.1f}" if row["max_latency"] is not None else "N/A"
+        
+        print(
+            f"{row['provider'][:20]:<20} {row['protocol']:<6} {row['total_runs']:>5} "
+            f"{row['total_queries']:>6} {row['failed_queries']:>5} {min_l:>6} {avg:>6} {max_l:>6} "
+            f"{row['endpoint']}"
+        )
+
+
 def main():
     """Main function to orchestrate the DNS latency test."""
     parser = argparse.ArgumentParser(
@@ -397,7 +423,18 @@ def main():
         "--slack-webhook",
         help="Slack Webhook URL for sending results (overrides config).",
     )
+    parser.add_argument(
+        "--stats",
+        action="store_true",
+        help="Show cumulative statistics from the database.",
+    )
     args = parser.parse_args()
+
+    init_db()
+
+    if args.stats:
+        print_historical_stats()
+        sys.exit(0)
 
     config = load_config()
     
@@ -439,7 +476,19 @@ def main():
 
     all_results = []
     while not results_queue.empty():
-        all_results.append(results_queue.get())
+        res = results_queue.get()
+        all_results.append(res)
+        
+        # Update database with these results
+        info = res["info"]
+        latencies = res.get("latencies", [])
+        update_server_stats(
+            info["provider"], 
+            info["protocol"], 
+            info["endpoint"], 
+            latencies, 
+            TEST_COUNT
+        )
 
     successful_results = [res for res in all_results if res["stats"] is not None]
     failed_servers = [res["info"] for res in all_results if res["stats"] is None]

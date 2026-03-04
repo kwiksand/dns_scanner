@@ -3,8 +3,7 @@ servers:
     Cloudflare:
     - protocol: DoQ
       endpoint: cloudflare-dns.com
-      enabled: false
-      expiry: '2026-02-20 10:21:12'
+      enabled: true
     - protocol: DNS
       endpoint: 1.1.1.1
       enabled: true

@@ -3,8 +3,11 @@ services:
   dns-scanner:
     build: .
     network_mode: host
+    ports:
+      - "5000:5000"
     volumes:
       - ./app/config.yml:/app/config.yml
+      - ./app/dns_scanner.db:/app/dns_scanner.db
     environment:
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
     # To run manually: docker-compose run dns-scanner

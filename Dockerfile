@@ -28,6 +28,8 @@ WORKDIR /app
 # Copy the installed packages from the builder stage
 COPY --from=builder /install /usr/local
 
-COPY app/* /app
+COPY app/ /app/
 
-ENTRYPOINT ["python3", "dns_latency_tester.py"]
+EXPOSE 5000
+
+ENTRYPOINT ["python3", "webapp.py"]
