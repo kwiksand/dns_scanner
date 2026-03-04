@@ -16,6 +16,9 @@ docker-compose.env
 # Database
 app/*.db
 
+# Gemini
+.gemini/
+
 # Python
 venv/
 .venv/

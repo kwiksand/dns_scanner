@@ -1,6 +1,9 @@
 # DNS Latency Tester & Dashboard
 
-A comprehensive tool to monitor and analyze the latency of various public DNS servers. It supports standard DNS (UDP), DNS-over-TLS (DoT), DNS-over-HTTPS (DoH), and DNS-over-QUIC (DoQ) protocols. Features include a persistent SQLite database for historical trends and a modern web dashboard for management.
+![DNS Scanner Architecture](assets/DNS%20Scanner.png)
+
+A comprehensive tool to monitor and analyze the latency of various public DNS servers.
+ It supports standard DNS (UDP), DNS-over-TLS (DoT), DNS-over-HTTPS (DoH), and DNS-over-QUIC (DoQ) protocols. Features include a persistent SQLite database for historical trends and a modern web dashboard for management.
 
 ## Features
 
